@@ -1,21 +1,31 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import RedisStore from 'connect-redis';
 import * as cookieParser from 'cookie-parser';
-import session from 'express-session';
+import * as session from 'express-session';
 import IORedis from 'ioredis';
 
-import { ms, StringValue } from '@/libs/common/utils/ms.util';
 import { parseBoolean } from '@/libs/common/utils/parse-boolean.utils';
 
 import { AppModule } from './app.module';
+import { ms, StringValue } from './libs/common/utils/ms.util';
 
 async function bootstrap() {
+	const logger = new Logger('Bootstrap');
 	const app = await NestFactory.create(AppModule);
 
+	logger.log('Application created.');
+
 	const config = app.get(ConfigService);
-	const redis = new IORedis(config.getOrThrow('REDIS_URI'));
+	const redis = new IORedis({
+		host: config.getOrThrow<string>('REDIS_HOST'),
+		port: config.getOrThrow<number>('REDIS_PORT'),
+		password: config.getOrThrow<string>('REDIS_PASSWORD')
+	});
+
+	logger.log('Redis is ready');
+
 	app.use(cookieParser(config.getOrThrow<string>('COOKIES_SECRET')));
 
 	app.useGlobalPipes(
@@ -44,11 +54,17 @@ async function bootstrap() {
 		})
 	);
 
+	logger.log('Session middleware configured.');
+
 	app.enableCors({
 		origin: config.getOrThrow<string>('ALLOWED_ORIGIN'),
 		credentials: true,
 		exposedHeaders: ['set-cookie']
 	});
-	await app.listen(config.getOrThrow<number>('APPLICATION_PORT'));
+	logger.log('CORS enabled.');
+
+	const port = config.getOrThrow<number>('APPLICATION_PORT');
+	await app.listen(port);
+	logger.log(`Application listening on port ${port}`);
 }
 bootstrap();
