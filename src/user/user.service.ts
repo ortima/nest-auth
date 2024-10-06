@@ -27,21 +27,24 @@ export class UserService {
 			include: { accounts: true }
 		});
 
-		if (!user) {
-			throw new NotFoundException(`User not found!`);
-		}
-
 		return user;
 	}
 
-	public async create(
-		email: string,
-		password: string,
-		displayName: string,
-		picture: string,
-		method: AuthMethod,
-		isVerified: boolean
-	) {
+	public async create({
+		email,
+		password,
+		displayName,
+		picture,
+		method,
+		isVerified
+	}: {
+		email: string;
+		password: string;
+		displayName: string;
+		picture: string;
+		method: AuthMethod;
+		isVerified: boolean;
+	}) {
 		return this.prismaService.user.create({
 			data: {
 				email,
